@@ -8,7 +8,7 @@ App::CLI::Plugin::InstallCallback - for App::CLI::Extension install callback mod
 
 =head1 VERSION
 
-0.1
+0.2
 
 =head1 SYNOPSIS
   
@@ -79,22 +79,19 @@ App::CLI::Command in a class that inherits the *prerun*, *postrun*, *finish* the
 
 use strict;
 use 5.008;
+use base qw(Class::Data::Accessor);
 use Sub::Install;
 use NEXT;
 
-our $PACKAGE  = __PACKAGE__;
-our $VERSION  = '0.1';
+__PACKAGE__->mk_classaccessor( "_install_callback" );
+our $VERSION  = '0.2';
+our @DEFAULT_CALLBACK = qw(prerun postrun finish);
 
 sub setup {
 
     my $self = shift;
 
-    $self->{$PACKAGE} = { map { $_ => [] } qw(prerun postrun finish) };
-    #{
-    #    no strict "refs"; ## no critic
-    #    my $pkg = ref($self);
-    #    *{"$pkg\::run_command"} = \&_run_command;
-    #}
+    $self->_install_callback({ map { $_ => [] } @DEFAULT_CALLBACK });
     Sub::Install::reinstall_sub({
                           code => \&_run_command,
                           into => ref($self),
@@ -120,8 +117,8 @@ Example:
 sub new_callback {
 
     my($self, $install, $callback) = @_;
-    die "already exists $install" if exists $self->{$PACKAGE}->{$install};
-    $self->{$PACKAGE}->{$install} = [];
+    die "already exists $install" if exists $self->_install_callback->{$install};
+    $self->_install_callback->{$install} = [];
     $self->add_callback($install, $callback) if defined $callback;
 }
 
@@ -142,10 +139,10 @@ Example:
 sub add_callback {
 
     my($self, $install, $callback) = @_;
-    die "non install callback: $install" if !exists $self->{$PACKAGE}->{$install};
+    die "non install callback: $install" if !exists $self->_install_callback->{$install};
     die "\$callback is not CODE" if ref($callback) ne "CODE";
 
-    push @{$self->{$PACKAGE}->{$install}}, $callback;
+    push @{$self->_install_callback->{$install}}, $callback;
 }
 
 =pod
@@ -167,12 +164,13 @@ Example:
 sub exec_callback {
 
     my($self, $install, @args) = @_;
-    die "non install callback: $install" if !exists $self->{$PACKAGE}->{$install};
+    die "non install callback: $install" if !exists $self->_install_callback->{$install};
 
+    my @install_callback = @{$self->_install_callback->{$install}};
     if (my $coderef = $self->can($install)) {
-        push @{$self->{$PACKAGE}->{$install}}, $coderef;
+        push @install_callback, $coderef;
     }
-    map { $self->$_(@args) } @{$self->{$PACKAGE}->{$install}};
+    map { $self->$_(@args) } @install_callback;
 }
 
 ##############################################
@@ -192,7 +190,7 @@ __END__
 
 =head1 SEE ALSO
 
-L<App::CLI::Extension>
+L<App::CLI::Extension> L<Class::Data::Accessor> L<Sub::Install>
 
 =head1 AUTHOR
 

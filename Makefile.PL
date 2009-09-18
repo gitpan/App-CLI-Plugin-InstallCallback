@@ -4,8 +4,9 @@ all_from 'lib/App/CLI/Plugin/InstallCallback.pm';
 
 build_requires 'Test::More';
 requires(
-      "App::CLI::Extension" => 0,
-      "NEXT"                => 0,
+      "App::CLI::Extension"   => 0,
+      "Class::Data::Accessor" => 0,
+      "NEXT"                  => 0,
       "Sub::Install"          => 0,
     );
 use_test_base;
